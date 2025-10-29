@@ -1,0 +1,66 @@
+# Model weights - too large for git
+*.pth
+*.pt
+*.pkl
+*.h5
+*.ckpt
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# Dataset (if you don't want to track via LFS)
+# Uncomment if needed:
+# data/train/*
+# data/val/*
+# data/test/*
+
+# Results and logs
+*.csv
+*.log
+*.txt
+results/
+logs/
+wandb/
+
+# Images generated during analysis
+*.png
+*.jpg
+*.jpeg
+!sample\ images/**/*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
