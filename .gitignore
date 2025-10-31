@@ -48,6 +48,18 @@ results/
 logs/
 wandb/
 
+# Audio recordings and transcripts
+logs/audio/*.wav
+logs/transcripts/*.json
+*.wav
+*.mp3
+*.flac
+
+# Camera frames and classifications
+logs/frames/*.jpg
+logs/frames/*.png
+logs/classifications/*.json
+
 # Images generated during analysis
 *.png
 *.jpg

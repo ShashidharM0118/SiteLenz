@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Logger - Real-time Transcription</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .btn-start:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(17, 153, 142, 0.4);
+        }
+
+        .btn-stop {
+            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+            color: white;
+        }
+
+        .btn-stop:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(235, 51, 73, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status-bar {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .recording {
+            background: #f45c43;
+        }
+
+        .idle {
+            background: #6c757d;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .transcripts-section {
+            margin-top: 30px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .section-title {
+            font-size: 20px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .transcript-count {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .transcripts-list {
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+        }
+
+        .transcript-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+        }
+
+        .transcript-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .transcript-time {
+            font-size: 12px;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+
+        .transcript-text {
+            color: #333;
+            line-height: 1.6;
+            font-size: 15px;
+        }
+
+        .transcript-audio {
+            font-size: 11px;
+            color: #999;
+            margin-top: 5px;
+        }
+
+        .search-box {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-search {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-search:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .no-transcripts {
+            text-align: center;
+            color: #999;
+            padding: 40px;
+            font-style: italic;
+        }
+
+        .match-highlight {
+            background: #fff3cd;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+
+        .loading {
+            text-align: center;
+            color: #667eea;
+            padding: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 Audio Logger</h1>
+        <p class="subtitle">Real-time Speech-to-Text Transcription</p>
+
+        <div class="controls">
+            <button class="btn btn-start" id="startBtn" onclick="startRecording()">
+                Start Recording
+            </button>
+            <button class="btn btn-stop" id="stopBtn" onclick="stopRecording()" disabled>
+                Stop Recording
+            </button>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="status-indicator idle" id="statusIndicator"></div>
+                <span id="statusText">Idle</span>
+            </div>
+            <div class="status-item">
+                <strong>Session:</strong> <span id="sessionId">-</span>
+            </div>
+            <div class="status-item">
+                <strong>Transcripts:</strong> <span id="transcriptCount">0</span>
+            </div>
+        </div>
+
+        <div class="search-box">
+            <input 
+                type="text" 
+                class="search-input" 
+                id="searchInput" 
+                placeholder="Search for keywords (comma-separated)..."
+            >
+            <button class="btn btn-search" onclick="searchKeywords()">
+                🔍 Search Keywords
+            </button>
+        </div>
+
+        <div class="transcripts-section">
+            <div class="section-header">
+                <span class="section-title">📝 Transcripts</span>
+                <span class="transcript-count" id="countBadge">0</span>
+            </div>
+            <div class="transcripts-list" id="transcriptsList">
+                <div class="no-transcripts">
+                    No transcripts yet. Click "Start Recording" to begin.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isRecording = false;
+        let currentSessionId = null;
+        let refreshInterval = null;
+
+        // Update status
+        function updateStatus() {
+            fetch('/api/audio/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const status = data.status;
+                        isRecording = status.is_recording;
+                        
+                        // Update UI
+                        document.getElementById('statusIndicator').className = 
+                            `status-indicator ${isRecording ? 'recording' : 'idle'}`;
+                        document.getElementById('statusText').textContent = 
+                            isRecording ? 'Recording...' : 'Idle';
+                        document.getElementById('sessionId').textContent = 
+                            status.session_id || '-';
+                        document.getElementById('transcriptCount').textContent = 
+                            status.transcript_count;
+                        
+                        // Update buttons
+                        document.getElementById('startBtn').disabled = isRecording;
+                        document.getElementById('stopBtn').disabled = !isRecording;
+                        
+                        // Update transcripts if recording
+                        if (isRecording) {
+                            loadTranscripts();
+                        }
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        // Start recording
+        function startRecording() {
+            fetch('/api/audio/start', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        currentSessionId = data.session_id;
+                        isRecording = true;
+                        updateStatus();
+                        
+                        // Auto-refresh transcripts every 3 seconds
+                        refreshInterval = setInterval(loadTranscripts, 3000);
+                        
+                        alert('✅ Recording started!\nSpeak into your microphone.');
+                    } else {
+                        alert('❌ Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('❌ Failed to start recording');
+                });
+        }
+
+        // Stop recording
+        function stopRecording() {
+            fetch('/api/audio/stop', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        isRecording = false;
+                        updateStatus();
+                        loadTranscripts();
+                        
+                        // Stop auto-refresh
+                        if (refreshInterval) {
+                            clearInterval(refreshInterval);
+                            refreshInterval = null;
+                        }
+                        
+                        const summary = data.summary;
+                        alert(`✅ Recording stopped!\n\nTranscripts: ${summary.transcript_count}\nSaved to: ${summary.transcript_file}`);
+                    } else {
+                        alert('❌ Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('❌ Failed to stop recording');
+                });
+        }
+
+        // Load transcripts
+        function loadTranscripts() {
+            fetch('/api/audio/transcripts')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayTranscripts(data.transcripts);
+                        document.getElementById('countBadge').textContent = data.count;
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        // Display transcripts
+        function displayTranscripts(transcripts) {
+            const list = document.getElementById('transcriptsList');
+            
+            if (transcripts.length === 0) {
+                list.innerHTML = '<div class="no-transcripts">No transcripts yet. Start recording to begin.</div>';
+                return;
+            }
+            
+            list.innerHTML = transcripts.map((t, index) => `
+                <div class="transcript-item">
+                    <div class="transcript-time">
+                        🕒 ${new Date(t.timestamp).toLocaleString()}
+                    </div>
+                    <div class="transcript-text">
+                        ${escapeHtml(t.text)}
+                    </div>
+                    <div class="transcript-audio">
+                        🎵 ${t.audio_file}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Search keywords
+        function searchKeywords() {
+            const input = document.getElementById('searchInput').value.trim();
+            if (!input) {
+                alert('Please enter keywords to search');
+                return;
+            }
+            
+            const keywords = input.split(',').map(k => k.trim()).filter(k => k);
+            
+            fetch('/api/audio/search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ keywords })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        if (data.count === 0) {
+                            alert(`🔍 No matches found for: ${keywords.join(', ')}`);
+                        } else {
+                            displaySearchResults(data.matches, keywords);
+                        }
+                    } else {
+                        alert('❌ Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('❌ Search failed');
+                });
+        }
+
+        // Display search results
+        function displaySearchResults(matches, keywords) {
+            const list = document.getElementById('transcriptsList');
+            
+            list.innerHTML = `
+                <div style="background: #fff3cd; padding: 10px; border-radius: 5px; margin-bottom: 10px; text-align: center;">
+                    🔍 Found ${matches.length} matches for: <strong>${keywords.join(', ')}</strong>
+                    <button onclick="loadTranscripts()" style="margin-left: 10px; padding: 5px 10px; border: none; background: #667eea; color: white; border-radius: 5px; cursor: pointer;">
+                        Clear Search
+                    </button>
+                </div>
+            ` + matches.map(m => {
+                let highlightedText = escapeHtml(m.text);
+                m.matched_keywords.forEach(kw => {
+                    const regex = new RegExp(`(${escapeRegex(kw)})`, 'gi');
+                    highlightedText = highlightedText.replace(regex, '<span class="match-highlight">$1</span>');
+                });
+                
+                return `
+                    <div class="transcript-item">
+                        <div class="transcript-time">
+                            🕒 ${new Date(m.timestamp).toLocaleString()}
+                        </div>
+                        <div class="transcript-text">
+                            ${highlightedText}
+                        </div>
+                        <div class="transcript-audio">
+                            🎵 ${m.audio_file} | 🔍 Matched: ${m.matched_keywords.join(', ')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Utility functions
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function escapeRegex(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        // Initialize
+        updateStatus();
+        setInterval(updateStatus, 2000);  // Update status every 2 seconds
+    </script>
+</body>
+</html>

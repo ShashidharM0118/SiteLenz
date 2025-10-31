@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>SiteLenz Monitor</title>
+    <link rel="manifest" href="/manifest.json">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            padding-bottom: 80px;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.98);
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            color: #333;
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .header .subtitle {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            margin-top: 3px;
+        }
+
+        /* Container */
+        .container {
+            padding: 15px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        /* Status Card */
+        .status-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .status-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-idle {
+            background: #e0e0e0;
+            color: #666;
+        }
+
+        .badge-recording {
+            background: #f44336;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Camera Preview */
+        .camera-preview {
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .camera-preview video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .camera-preview .placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            font-size: 16px;
+        }
+
+        .camera-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.7));
+            padding: 15px;
+            color: white;
+        }
+
+        .classification-result {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .confidence-bar {
+            height: 4px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: #4CAF50;
+            transition: width 0.3s ease;
+        }
+
+        /* Control Buttons */
+        .control-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-start {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .btn-stop {
+            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+            color: white;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            grid-column: 1 / -1;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            background: white;
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #666;
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        /* Log Display */
+        .log-container {
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .log-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .log-time {
+            font-size: 11px;
+            color: #999;
+            margin-bottom: 5px;
+        }
+
+        .log-text {
+            font-size: 14px;
+            color: #333;
+            line-height: 1.5;
+        }
+
+        .log-confidence {
+            font-size: 16px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .probability-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #666;
+            margin-top: 3px;
+        }
+
+        .no-logs {
+            text-align: center;
+            color: #999;
+            padding: 40px 20px;
+            font-style: italic;
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 10px;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-around;
+            z-index: 1000;
+        }
+
+        .nav-item {
+            flex: 1;
+            text-align: center;
+            padding: 8px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background 0.3s ease;
+        }
+
+        .nav-item.active {
+            background: #f0f0f0;
+        }
+
+        .nav-icon {
+            font-size: 24px;
+            margin-bottom: 3px;
+        }
+
+        .nav-label {
+            font-size: 11px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .modal-text {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .modal-btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .modal-btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 18px;
+            }
+            
+            .btn {
+                font-size: 14px;
+                padding: 14px;
+            }
+        }
+
+        /* Hide scrollbar but keep functionality */
+        .log-container::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .log-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 2px;
+        }
+
+        .log-container::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1>🏗️ SiteLenz Monitor</h1>
+        <div class="subtitle">Building Defect Detection System</div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container" id="mainView">
+        <!-- Camera Preview -->
+        <div class="status-card">
+            <div class="status-header">
+                <div class="status-title">📸 Camera Feed</div>
+                <div class="status-badge badge-idle" id="cameraStatusBadge">Idle</div>
+            </div>
+            <div class="camera-preview">
+                <video id="cameraVideo" autoplay playsinline></video>
+                <div class="placeholder" id="cameraPlaceholder">
+                    <div>
+                        <div style="font-size: 48px; margin-bottom: 10px;">📷</div>
+                        <div>Camera Off</div>
+                    </div>
+                </div>
+                <div class="camera-overlay" id="cameraOverlay" style="display: none;">
+                    <div class="classification-result" id="classificationResult">
+                        Waiting for classification...
+                    </div>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" id="confidenceFill" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audio Status -->
+        <div class="status-card">
+            <div class="status-header">
+                <div class="status-title">🎤 Audio Recording</div>
+                <div class="status-badge badge-idle" id="audioStatusBadge">Idle</div>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="transcriptCount">0</div>
+                    <div class="stat-label">Transcripts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="classificationCount">0</div>
+                    <div class="stat-label">Classifications</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Buttons -->
+        <div class="control-grid">
+            <button class="btn btn-start" id="audioStartBtn" onclick="startAudio()">
+                🎤 Start Audio
+            </button>
+            <button class="btn btn-stop" id="audioStopBtn" onclick="stopAudio()" disabled>
+                ⏹ Stop Audio
+            </button>
+            <button class="btn btn-start" id="cameraStartBtn" onclick="startCamera()">
+                📸 Start Camera
+            </button>
+            <button class="btn btn-stop" id="cameraStopBtn" onclick="stopCamera()" disabled>
+                ⏹ Stop Camera
+            </button>
+        </div>
+
+        <button class="btn btn-primary" id="startBothBtn" onclick="startBoth()">
+            🚀 Start Both Systems
+        </button>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('transcripts')">📝 Transcripts</button>
+            <button class="tab" onclick="showTab('classifications')">🔍 Classifications</button>
+        </div>
+
+        <!-- Logs -->
+        <div class="log-container" id="transcriptsLog">
+            <div class="no-logs">No transcripts yet. Click "Start Audio" to begin recording.</div>
+        </div>
+
+        <div class="log-container" id="classificationsLog" style="display: none;">
+            <div class="no-logs">No classifications yet. Click "Start Camera" to begin monitoring.</div>
+        </div>
+    </div>
+
+    <!-- Sessions View (Hidden by default) -->
+    <div class="container" id="sessionsView" style="display: none;">
+        <div class="status-card">
+            <div class="status-title" style="margin-bottom: 15px;">📂 Recorded Sessions</div>
+            <div id="sessionsList">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings View (Hidden by default) -->
+    <div class="container" id="settingsView" style="display: none;">
+        <div class="status-card">
+            <div class="status-title" style="margin-bottom: 15px;">⚙️ Settings</div>
+            <div style="padding: 20px; text-align: center; color: #666;">
+                <p>Coming soon...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchView('main')">
+            <div class="nav-icon">🏠</div>
+            <div class="nav-label">Monitor</div>
+        </div>
+        <div class="nav-item" onclick="switchView('sessions')">
+            <div class="nav-icon">📂</div>
+            <div class="nav-label">Sessions</div>
+        </div>
+        <div class="nav-item" onclick="switchView('settings')">
+            <div class="nav-icon">⚙️</div>
+            <div class="nav-label">Settings</div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" id="modal">
+        <div class="modal-content">
+            <div class="modal-title" id="modalTitle">Success</div>
+            <div class="modal-text" id="modalText">Operation completed successfully</div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-primary" onclick="closeModal()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API Configuration
+        const API_BASE = window.location.origin;
+        
+        // State
+        let audioRecording = false;
+        let cameraRecording = false;
+        let currentTab = 'transcripts';
+        let cameraStream = null;
+        let captureInterval = null;
+
+        // Initialize
+        window.addEventListener('load', () => {
+            updateStatus();
+            requestCameraAccess();
+            setInterval(updateStatus, 3000);
+        });
+
+        // View Switching
+        function switchView(view) {
+            document.querySelectorAll('.container').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            
+            if (view === 'main') {
+                document.getElementById('mainView').style.display = 'block';
+                document.querySelectorAll('.nav-item')[0].classList.add('active');
+            } else if (view === 'sessions') {
+                document.getElementById('sessionsView').style.display = 'block';
+                document.querySelectorAll('.nav-item')[1].classList.add('active');
+                loadSessions();
+            } else if (view === 'settings') {
+                document.getElementById('settingsView').style.display = 'block';
+                document.querySelectorAll('.nav-item')[2].classList.add('active');
+            }
+        }
+
+        // Tab Switching
+        function showTab(tab) {
+            document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            currentTab = tab;
+            if (tab === 'transcripts') {
+                document.getElementById('transcriptsLog').style.display = 'block';
+                document.getElementById('classificationsLog').style.display = 'none';
+                loadTranscripts();
+            } else {
+                document.getElementById('transcriptsLog').style.display = 'none';
+                document.getElementById('classificationsLog').style.display = 'block';
+                loadClassifications();
+            }
+        }
+
+        // Camera Access
+        async function requestCameraAccess() {
+            try {
+                cameraStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' }, 
+                    audio: false 
+                });
+                const video = document.getElementById('cameraVideo');
+                video.srcObject = cameraStream;
+                document.getElementById('cameraPlaceholder').style.display = 'none';
+                video.style.display = 'block';
+            } catch (error) {
+                console.error('Camera access denied:', error);
+                showModal('Camera Access', 'Please grant camera permissions to use this feature.');
+            }
+        }
+
+        // Audio Functions
+        async function startAudio() {
+            try {
+                const response = await fetch(`${API_BASE}/api/audio/start`, { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    audioRecording = true;
+                    updateButtons();
+                    showModal('Success', 'Audio recording started!');
+                } else {
+                    showModal('Error', data.error);
+                }
+            } catch (error) {
+                showModal('Error', 'Failed to start audio: ' + error.message);
+            }
+        }
+
+        async function stopAudio() {
+            try {
+                const response = await fetch(`${API_BASE}/api/audio/stop`, { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    audioRecording = false;
+                    updateButtons();
+                    loadTranscripts();
+                    showModal('Stopped', `Audio recording stopped! ${data.summary.transcript_count} transcripts saved.`);
+                } else {
+                    showModal('Error', data.error);
+                }
+            } catch (error) {
+                showModal('Error', 'Failed to stop audio: ' + error.message);
+            }
+        }
+
+        // Camera Functions
+        async function startCamera() {
+            try {
+                const response = await fetch(`${API_BASE}/api/camera/start`, { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    cameraRecording = true;
+                    updateButtons();
+                    document.getElementById('cameraOverlay').style.display = 'block';
+                    startCapture();
+                    showModal('Success', 'Camera monitoring started!');
+                } else {
+                    showModal('Error', data.error);
+                }
+            } catch (error) {
+                showModal('Error', 'Failed to start camera: ' + error.message);
+            }
+        }
+
+        async function stopCamera() {
+            try {
+                const response = await fetch(`${API_BASE}/api/camera/stop`, { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    cameraRecording = false;
+                    updateButtons();
+                    document.getElementById('cameraOverlay').style.display = 'none';
+                    stopCapture();
+                    loadClassifications();
+                    showModal('Stopped', `Camera monitoring stopped! ${data.summary.classification_count} classifications saved.`);
+                } else {
+                    showModal('Error', data.error);
+                }
+            } catch (error) {
+                showModal('Error', 'Failed to stop camera: ' + error.message);
+            }
+        }
+
+        // Capture and Classify
+        function startCapture() {
+            captureInterval = setInterval(captureAndClassify, 5000);
+        }
+
+        function stopCapture() {
+            if (captureInterval) {
+                clearInterval(captureInterval);
+                captureInterval = null;
+            }
+        }
+
+        async function captureAndClassify() {
+            if (!cameraRecording) return;
+            
+            const video = document.getElementById('cameraVideo');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            
+            const imageData = canvas.toDataURL('image/jpeg');
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/camera/classify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: imageData })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateClassificationOverlay(data.classification);
+                }
+            } catch (error) {
+                console.error('Classification failed:', error);
+            }
+        }
+
+        function updateClassificationOverlay(classification) {
+            document.getElementById('classificationResult').textContent = 
+                `${classification.prediction} (${classification.confidence.toFixed(1)}%)`;
+            document.getElementById('confidenceFill').style.width = 
+                `${classification.confidence}%`;
+        }
+
+        // Unified Controls
+        async function startBoth() {
+            try {
+                const response = await fetch(`${API_BASE}/api/unified/start`, { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    audioRecording = true;
+                    cameraRecording = true;
+                    updateButtons();
+                    document.getElementById('cameraOverlay').style.display = 'block';
+                    startCapture();
+                    showModal('Success', 'Both systems started!');
+                } else {
+                    showModal('Error', data.error);
+                }
+            } catch (error) {
+                showModal('Error', 'Failed to start: ' + error.message);
+            }
+        }
+
+        async function stopBoth() {
+            try {
+                const response = await fetch(`${API_BASE}/api/unified/stop`, { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    audioRecording = false;
+                    cameraRecording = false;
+                    updateButtons();
+                    document.getElementById('cameraOverlay').style.display = 'none';
+                    stopCapture();
+                    loadTranscripts();
+                    loadClassifications();
+                    showModal('Stopped', 'Both systems stopped!');
+                } else {
+                    showModal('Error', data.error);
+                }
+            } catch (error) {
+                showModal('Error', 'Failed to stop: ' + error.message);
+            }
+        }
+
+        // Update Functions
+        async function updateStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/api/unified/status`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Update badges
+                    document.getElementById('audioStatusBadge').textContent = 
+                        data.audio.is_recording ? 'Recording' : 'Idle';
+                    document.getElementById('audioStatusBadge').className = 
+                        'status-badge ' + (data.audio.is_recording ? 'badge-recording' : 'badge-idle');
+                    
+                    document.getElementById('cameraStatusBadge').textContent = 
+                        data.camera.is_recording ? 'Recording' : 'Idle';
+                    document.getElementById('cameraStatusBadge').className = 
+                        'status-badge ' + (data.camera.is_recording ? 'badge-recording' : 'badge-idle');
+                    
+                    // Update counts
+                    document.getElementById('transcriptCount').textContent = 
+                        data.audio.info.transcript_count;
+                    document.getElementById('classificationCount').textContent = 
+                        data.camera.info.classification_count;
+                    
+                    // Auto-refresh logs if recording
+                    if (data.audio.is_recording && currentTab === 'transcripts') {
+                        loadTranscripts();
+                    }
+                    if (data.camera.is_recording && currentTab === 'classifications') {
+                        loadClassifications();
+                    }
+                }
+            } catch (error) {
+                console.error('Status update failed:', error);
+            }
+        }
+
+        function updateButtons() {
+            document.getElementById('audioStartBtn').disabled = audioRecording;
+            document.getElementById('audioStopBtn').disabled = !audioRecording;
+            document.getElementById('cameraStartBtn').disabled = cameraRecording;
+            document.getElementById('cameraStopBtn').disabled = !cameraRecording;
+            
+            if (audioRecording || cameraRecording) {
+                document.getElementById('startBothBtn').textContent = '⏹ Stop Both Systems';
+                document.getElementById('startBothBtn').onclick = stopBoth;
+            } else {
+                document.getElementById('startBothBtn').textContent = '🚀 Start Both Systems';
+                document.getElementById('startBothBtn').onclick = startBoth;
+            }
+        }
+
+        // Load Data
+        async function loadTranscripts() {
+            try {
+                const response = await fetch(`${API_BASE}/api/audio/transcripts`);
+                const data = await response.json();
+                
+                const container = document.getElementById('transcriptsLog');
+                
+                if (data.transcripts && data.transcripts.length > 0) {
+                    container.innerHTML = data.transcripts.map((t, i) => `
+                        <div class="log-item">
+                            <div class="log-time">[${i + 1}] ${new Date(t.timestamp).toLocaleTimeString()}</div>
+                            <div class="log-text">${t.text}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div class="no-logs">No transcripts yet. Start recording to begin.</div>';
+                }
+            } catch (error) {
+                console.error('Failed to load transcripts:', error);
+            }
+        }
+
+        async function loadClassifications() {
+            try {
+                const response = await fetch(`${API_BASE}/api/camera/classifications`);
+                const data = await response.json();
+                
+                const container = document.getElementById('classificationsLog');
+                
+                if (data.classifications && data.classifications.length > 0) {
+                    container.innerHTML = data.classifications.map((c, i) => {
+                        const topProbs = Object.entries(c.probabilities)
+                            .sort((a, b) => b[1] - a[1])
+                            .slice(0, 3);
+                        
+                        return `
+                            <div class="log-item">
+                                <div class="log-time">[${i + 1}] ${new Date(c.timestamp).toLocaleTimeString()}</div>
+                                <div class="log-confidence">🏗️ ${c.prediction} (${c.confidence.toFixed(1)}%)</div>
+                                ${topProbs.map(([cls, prob]) => `
+                                    <div class="probability-item">
+                                        <span>• ${cls}</span>
+                                        <span>${prob.toFixed(1)}%</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    container.innerHTML = '<div class="no-logs">No classifications yet. Start camera to begin.</div>';
+                }
+            } catch (error) {
+                console.error('Failed to load classifications:', error);
+            }
+        }
+
+        async function loadSessions() {
+            try {
+                const response = await fetch(`${API_BASE}/api/sessions/list`);
+                const data = await response.json();
+                
+                const container = document.getElementById('sessionsList');
+                
+                if (data.sessions && data.sessions.length > 0) {
+                    container.innerHTML = data.sessions.map(session => `
+                        <div class="log-item" onclick="viewSession('${session}')">
+                            <div class="log-text">📁 Session ${session}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div class="no-logs">No sessions found.</div>';
+                }
+            } catch (error) {
+                console.error('Failed to load sessions:', error);
+                document.getElementById('sessionsList').innerHTML = 
+                    '<div class="no-logs">Error loading sessions</div>';
+            }
+        }
+
+        // Modal
+        function showModal(title, text) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalText').textContent = text;
+            document.getElementById('modal').classList.add('show');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('show');
+        }
+
+        // Service Worker Registration (PWA)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('Service Worker registered'))
+                    .catch(err => console.log('Service Worker registration failed'));
+            });
+        }
+    </script>
+</body>
+</html>
