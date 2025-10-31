@@ -117,6 +117,14 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .camera-preview video.active {
+            display: block;
         }
 
         .camera-preview .placeholder {
@@ -127,6 +135,13 @@
             justify-content: center;
             color: #666;
             font-size: 16px;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .camera-preview .placeholder.hidden {
+            display: none;
         }
 
         .camera-overlay {
@@ -653,17 +668,55 @@
         // Camera Access
         async function requestCameraAccess() {
             try {
+                // Check if camera permission is already granted
+                const permission = await navigator.permissions.query({ name: 'camera' });
+                
+                if (permission.state === 'denied') {
+                    showModal('Camera Permission Required', 
+                        'Camera access is denied. Please enable camera permissions in your browser settings:\n\n' +
+                        '1. Tap the lock icon in address bar\n' +
+                        '2. Find Camera permissions\n' +
+                        '3. Change to "Allow"\n' +
+                        '4. Reload the page');
+                    throw new Error('Camera permission denied');
+                }
+                
                 cameraStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'environment' }, 
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }, 
                     audio: false 
                 });
                 const video = document.getElementById('cameraVideo');
                 video.srcObject = cameraStream;
-                document.getElementById('cameraPlaceholder').style.display = 'none';
-                video.style.display = 'block';
+                
+                // Wait for video to load metadata
+                await new Promise((resolve) => {
+                    video.onloadedmetadata = () => {
+                        video.play();
+                        resolve();
+                    };
+                });
+                
+                // Show video, hide placeholder
+                document.getElementById('cameraPlaceholder').classList.add('hidden');
+                video.classList.add('active');
+                console.log('✅ Camera access granted and video playing');
             } catch (error) {
-                console.error('Camera access denied:', error);
-                showModal('Camera Access', 'Please grant camera permissions to use this feature.');
+                console.error('Camera access error:', error);
+                if (error.name === 'NotAllowedError') {
+                    showModal('Camera Permission Required', 
+                        'Please allow camera access when prompted by your browser.\n\n' +
+                        'This app needs camera access to detect wall defects.');
+                } else if (error.name === 'NotFoundError') {
+                    showModal('Camera Not Found', 
+                        'No camera detected on your device. Please check your device settings.');
+                } else {
+                    showModal('Camera Error', 'Failed to access camera: ' + error.message);
+                }
+                throw error;
             }
         }
 
@@ -706,6 +759,11 @@
         // Camera Functions
         async function startCamera() {
             try {
+                // Request camera access first if not already granted
+                if (!cameraStream) {
+                    await requestCameraAccess();
+                }
+                
                 const response = await fetch(`${API_BASE}/api/camera/start`, { method: 'POST' });
                 const data = await response.json();
                 
@@ -743,6 +801,19 @@
             }
         }
 
+        // Stop camera stream completely
+        function stopCameraStream() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+                const video = document.getElementById('cameraVideo');
+                video.srcObject = null;
+                video.classList.remove('active');
+                document.getElementById('cameraPlaceholder').classList.remove('hidden');
+                console.log('Camera stream stopped');
+            }
+        }
+
         // Capture and Classify
         function startCapture() {
             captureInterval = setInterval(captureAndClassify, 5000);
@@ -759,10 +830,25 @@
             if (!cameraRecording) return;
             
             const video = document.getElementById('cameraVideo');
+            
+            // Check if video is ready
+            if (!video.srcObject || video.readyState < 2) {
+                console.log('Video not ready yet, skipping capture');
+                return;
+            }
+            
             const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            
+            // Check if video has valid dimensions
+            if (canvas.width === 0 || canvas.height === 0) {
+                console.error('Invalid video dimensions');
+                return;
+            }
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
             
             const imageData = canvas.toDataURL('image/jpeg');
             
@@ -793,6 +879,11 @@
         // Unified Controls
         async function startBoth() {
             try {
+                // Request camera access first if not already granted
+                if (!cameraStream) {
+                    await requestCameraAccess();
+                }
+                
                 const response = await fetch(`${API_BASE}/api/unified/start`, { method: 'POST' });
                 const data = await response.json();
                 
