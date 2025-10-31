@@ -57,13 +57,27 @@ jobs:
     
     - name: Copy main.py
       run: |
-        cp mobile_kivy_app.py main.py
+        cp mobile_kivy_app_lite.py main.py
+        echo "Using lightweight version (server-based ML)"
     
     - name: Build APK with Buildozer
       run: |
-        # Accept Android SDK licenses
-        yes | buildozer android debug || true
-        buildozer android debug
+        # Set Java home
+        export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+        export PATH=$JAVA_HOME/bin:$PATH
+        
+        # Build with verbose output
+        echo "Starting Buildozer build..."
+        buildozer -v android debug
+        
+        # Check if APK was created
+        if [ -f "bin/*.apk" ]; then
+          echo "✅ APK build successful!"
+          ls -lh bin/*.apk
+        else
+          echo "❌ APK build failed - no output file"
+          exit 1
+        fi
     
     - name: Sign APK (optional)
       if: github.ref == 'refs/heads/main'

@@ -13,14 +13,24 @@ package.domain = org.sitelenz
 source.dir = .
 
 # (list) Source files to include (let empty to include all the files)
-source.include_exts = py,png,jpg,kv,atlas,json,pth
+source.include_exts = py,png,jpg,kv,atlas,json
+
+# (list) Source files to exclude
+source.exclude_exts = pth,pkl,onnx,h5,weights
+
+# (list) List of directory to exclude (let empty to not exclude anything)
+source.exclude_dirs = tests,logs,data,models,.buildozer,.git,.github,__pycache__
+
+# (list) List of exclusions using pattern matching
+source.exclude_patterns = vit_weights.pth,*.pth,*.pkl,test_*.py
 
 # (str) Application versioning (method 1)
 version = 1.0
 
 # (list) Application requirements
 # comma separated e.g. requirements = sqlite3,kivy
-requirements = python3,kivy,opencv-python,torch,torchvision,timm,pillow,numpy,requests
+# Note: Excluding heavy ML libraries (torch, opencv) - app will use server API
+requirements = python3==3.10.6,kivy==2.2.1,pillow,numpy,requests,pyjnius
 
 # (str) Supported orientation (one of landscape, sensorLandscape, portrait or all)
 orientation = portrait
