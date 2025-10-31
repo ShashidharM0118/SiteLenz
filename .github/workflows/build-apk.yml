@@ -55,6 +55,10 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-buildozer-
     
+    - name: Copy main.py
+      run: |
+        cp mobile_kivy_app.py main.py
+    
     - name: Build APK with Buildozer
       run: |
         # Accept Android SDK licenses
