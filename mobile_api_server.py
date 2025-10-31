@@ -407,6 +407,119 @@ def unified_status():
             'error': str(e)
         }), 500
 
+@app.route('/api/unified/capture', methods=['POST'])
+def capture_with_voice():
+    """Capture and classify image when voice is detected, return synchronized data."""
+    try:
+        data = request.get_json()
+        
+        # Get the image data
+        if 'image' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'No image provided'
+            }), 400
+        
+        # Decode base64 image
+        image_data = data['image'].split(',')[1] if ',' in data['image'] else data['image']
+        image_bytes = base64.b64decode(image_data)
+        image = Image.open(io.BytesIO(image_bytes))
+        
+        # Convert PIL to OpenCV format
+        image_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+        
+        # Get transcript if provided (from latest voice capture)
+        transcript = data.get('transcript', '')
+        timestamp = data.get('timestamp', datetime.now().isoformat())
+        
+        # Classify the image
+        classification = camera_classifier._classify_frame(image_cv)
+        
+        if not classification:
+            return jsonify({
+                'success': False,
+                'error': 'Image classification failed'
+            }), 500
+        
+        # Save the synchronized log entry
+        log_entry = {
+            'timestamp': timestamp,
+            'transcript': transcript,
+            'classification': classification,
+            'image_data': data['image']  # Keep base64 for display
+        }
+        
+        # Save to a unified log file
+        log_dir = Path("logs/unified")
+        log_dir.mkdir(parents=True, exist_ok=True)
+        
+        session_id = audio_logger.session_id if audio_logger.session_id else datetime.now().strftime('%Y%m%d_%H%M%S')
+        log_file = log_dir / f"session_{session_id}.json"
+        
+        # Append to existing log or create new
+        if log_file.exists():
+            with open(log_file, 'r') as f:
+                logs = json.load(f)
+        else:
+            logs = []
+        
+        logs.append(log_entry)
+        
+        with open(log_file, 'w') as f:
+            json.dump(logs, f, indent=2)
+        
+        return jsonify({
+            'success': True,
+            'entry': log_entry,
+            'message': 'Synchronized capture saved'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/unified/logs', methods=['GET'])
+def get_unified_logs():
+    """Get all synchronized voice+image logs."""
+    try:
+        session_id = request.args.get('session_id', None)
+        log_dir = Path("logs/unified")
+        
+        if not log_dir.exists():
+            return jsonify({
+                'success': True,
+                'logs': [],
+                'count': 0
+            })
+        
+        logs = []
+        
+        if session_id:
+            log_file = log_dir / f"session_{session_id}.json"
+            if log_file.exists():
+                with open(log_file, 'r') as f:
+                    logs = json.load(f)
+        else:
+            # Get all logs from all sessions
+            for log_file in sorted(log_dir.glob("session_*.json"), reverse=True):
+                with open(log_file, 'r') as f:
+                    session_logs = json.load(f)
+                    logs.extend(session_logs)
+        
+        return jsonify({
+            'success': True,
+            'logs': logs,
+            'count': len(logs)
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 # ==================== SESSION MANAGEMENT ====================
 
 @app.route('/api/sessions/list', methods=['GET'])

@@ -546,17 +546,26 @@
         </div>
 
         <button class="btn btn-primary" id="startBothBtn" onclick="startBoth()">
-            🚀 Start Both Systems
+            🎙️ Start Voice-Triggered Monitoring
+        </button>
+
+        <button class="btn btn-stop" id="stopBothBtn" onclick="stopBoth()" disabled style="display: none;">
+            ⏹ Stop Monitoring
         </button>
 
         <!-- Tabs -->
         <div class="tabs">
-            <button class="tab active" onclick="showTab('transcripts')">📝 Transcripts</button>
+            <button class="tab active" onclick="showTab('unified')">🎙️ Voice+Image</button>
+            <button class="tab" onclick="showTab('transcripts')">📝 Transcripts</button>
             <button class="tab" onclick="showTab('classifications')">🔍 Classifications</button>
         </div>
 
         <!-- Logs -->
-        <div class="log-container" id="transcriptsLog">
+        <div class="log-container" id="unifiedLog">
+            <div class="no-logs">Start voice-triggered monitoring to see synchronized logs.</div>
+        </div>
+
+        <div class="log-container" id="transcriptsLog" style="display: none;">
             <div class="no-logs">No transcripts yet. Click "Start Audio" to begin recording.</div>
         </div>
 
@@ -622,12 +631,16 @@
         let currentTab = 'transcripts';
         let cameraStream = null;
         let captureInterval = null;
+        let lastTranscriptCount = 0;
+        let syncedMode = false; // New: Track if we're in synced voice+image mode
 
         // Initialize
         window.addEventListener('load', () => {
             updateStatus();
             requestCameraAccess();
             setInterval(updateStatus, 3000);
+            // Check for new transcripts periodically when in synced mode
+            setInterval(checkForNewTranscripts, 2000);
         });
 
         // View Switching
@@ -654,12 +667,20 @@
             event.target.classList.add('active');
             
             currentTab = tab;
-            if (tab === 'transcripts') {
+            
+            // Hide all logs
+            document.getElementById('unifiedLog').style.display = 'none';
+            document.getElementById('transcriptsLog').style.display = 'none';
+            document.getElementById('classificationsLog').style.display = 'none';
+            
+            // Show selected tab
+            if (tab === 'unified') {
+                document.getElementById('unifiedLog').style.display = 'block';
+                loadUnifiedLogs();
+            } else if (tab === 'transcripts') {
                 document.getElementById('transcriptsLog').style.display = 'block';
-                document.getElementById('classificationsLog').style.display = 'none';
                 loadTranscripts();
-            } else {
-                document.getElementById('transcriptsLog').style.display = 'none';
+            } else if (tab === 'classifications') {
                 document.getElementById('classificationsLog').style.display = 'block';
                 loadClassifications();
             }
@@ -890,10 +911,10 @@
                 if (data.success) {
                     audioRecording = true;
                     cameraRecording = true;
+                    syncedMode = true; // Enable synced mode
                     updateButtons();
                     document.getElementById('cameraOverlay').style.display = 'block';
-                    startCapture();
-                    showModal('Success', 'Both systems started!');
+                    showModal('Success', 'Voice-triggered monitoring started! Image will be captured when you speak.');
                 } else {
                     showModal('Error', data.error);
                 }
@@ -910,18 +931,169 @@
                 if (data.success) {
                     audioRecording = false;
                     cameraRecording = false;
+                    syncedMode = false; // Disable synced mode
                     updateButtons();
                     document.getElementById('cameraOverlay').style.display = 'none';
-                    stopCapture();
-                    loadTranscripts();
-                    loadClassifications();
-                    showModal('Stopped', 'Both systems stopped!');
+                    loadUnifiedLogs(); // Load the synchronized logs
+                    showModal('Stopped', 'Monitoring stopped! Check the unified logs.');
                 } else {
                     showModal('Error', data.error);
                 }
             } catch (error) {
                 showModal('Error', 'Failed to stop: ' + error.message);
             }
+        }
+
+        // Check for new transcripts and trigger image capture
+        async function checkForNewTranscripts() {
+            if (!syncedMode || !audioRecording) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/audio/transcripts`);
+                const data = await response.json();
+                
+                if (data.success && data.transcripts.length > lastTranscriptCount) {
+                    // New transcript(s) detected!
+                    const newTranscripts = data.transcripts.slice(lastTranscriptCount);
+                    lastTranscriptCount = data.transcripts.length;
+                    
+                    // Capture and analyze image for each new transcript
+                    for (const transcript of newTranscripts) {
+                        await captureWithVoice(transcript);
+                    }
+                }
+            } catch (error) {
+                console.error('Error checking transcripts:', error);
+            }
+        }
+
+        // Capture image when voice is detected
+        async function captureWithVoice(transcript) {
+            try {
+                const video = document.getElementById('cameraVideo');
+                
+                // Check if video is ready
+                if (!video.srcObject || video.readyState < 2) {
+                    console.log('Video not ready, skipping capture');
+                    return;
+                }
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth || 640;
+                canvas.height = video.videoHeight || 480;
+                
+                if (canvas.width === 0 || canvas.height === 0) {
+                    console.error('Invalid video dimensions');
+                    return;
+                }
+                
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0);
+                const imageData = canvas.toDataURL('image/jpeg');
+                
+                // Send to server with transcript
+                const response = await fetch(`${API_BASE}/api/unified/capture`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        image: imageData,
+                        transcript: transcript.text,
+                        timestamp: transcript.timestamp
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Update overlay with classification
+                    updateClassificationOverlay(data.entry.classification);
+                    console.log('✅ Synchronized capture:', transcript.text, '→', data.entry.classification.prediction);
+                    
+                    // Show notification
+                    showToast(`📸 Captured: ${data.entry.classification.prediction}`);
+                } else {
+                    console.error('Capture failed:', data.error);
+                }
+            } catch (error) {
+                console.error('Error capturing with voice:', error);
+            }
+        }
+
+        // Load unified synchronized logs
+        async function loadUnifiedLogs() {
+            try {
+                const response = await fetch(`${API_BASE}/api/unified/logs`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayUnifiedLogs(data.logs);
+                }
+            } catch (error) {
+                console.error('Error loading unified logs:', error);
+            }
+        }
+
+        // Display unified logs (voice + image + analysis)
+        function displayUnifiedLogs(logs) {
+            const container = document.getElementById('transcriptsLog');
+            
+            if (logs.length === 0) {
+                container.innerHTML = '<div class="no-logs">No synchronized logs yet.</div>';
+                return;
+            }
+            
+            container.innerHTML = logs.map(log => `
+                <div class="log-item unified-log">
+                    <div class="log-time">${new Date(log.timestamp).toLocaleString()}</div>
+                    <div class="log-text"><strong>🎤 Voice:</strong> ${log.transcript || 'No audio'}</div>
+                    <div class="log-confidence"><strong>📸 Analysis:</strong> ${log.classification.prediction}</div>
+                    <div class="probability-item">
+                        <span>Confidence:</span>
+                        <span>${log.classification.confidence.toFixed(1)}%</span>
+                    </div>
+                    ${log.image_data ? `
+                        <div class="log-image">
+                            <img src="${log.image_data}" alt="Captured" style="width: 100%; border-radius: 8px; margin-top: 10px;">
+                        </div>
+                    ` : ''}
+                    <div class="log-details" style="margin-top: 8px; font-size: 11px; color: #999;">
+                        ${Object.entries(log.classification.probabilities).map(([cls, prob]) => 
+                            `<div>${cls}: ${prob.toFixed(1)}%</div>`
+                        ).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Show toast notification
+        function showToast(message) {
+            // Create toast element if it doesn't exist
+            let toast = document.getElementById('toast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'toast';
+                toast.style.cssText = `
+                    position: fixed;
+                    top: 80px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: rgba(0,0,0,0.8);
+                    color: white;
+                    padding: 12px 24px;
+                    border-radius: 25px;
+                    font-size: 14px;
+                    z-index: 10000;
+                    display: none;
+                `;
+                document.body.appendChild(toast);
+            }
+            
+            toast.textContent = message;
+            toast.style.display = 'block';
+            
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
         }
 
         // Update Functions
@@ -967,12 +1139,16 @@
             document.getElementById('cameraStartBtn').disabled = cameraRecording;
             document.getElementById('cameraStopBtn').disabled = !cameraRecording;
             
-            if (audioRecording || cameraRecording) {
-                document.getElementById('startBothBtn').textContent = '⏹ Stop Both Systems';
-                document.getElementById('startBothBtn').onclick = stopBoth;
+            const startBtn = document.getElementById('startBothBtn');
+            const stopBtn = document.getElementById('stopBothBtn');
+            
+            if (syncedMode && (audioRecording || cameraRecording)) {
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'block';
+                stopBtn.disabled = false;
             } else {
-                document.getElementById('startBothBtn').textContent = '🚀 Start Both Systems';
-                document.getElementById('startBothBtn').onclick = startBoth;
+                startBtn.style.display = 'block';
+                stopBtn.style.display = 'none';
             }
         }
 
