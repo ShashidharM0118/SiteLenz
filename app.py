@@ -11,6 +11,14 @@ from datetime import datetime
 
 app = Flask(__name__)
 
+# Register 3D reconstruction blueprint
+try:
+    from reconstruction_3d.api.routes import reconstruction_bp
+    app.register_blueprint(reconstruction_bp)
+    print("✅ 3D Reconstruction API loaded!")
+except Exception as e:
+    print(f"⚠️  3D Reconstruction API not available: {e}")
+
 # Configuration
 MODEL_PATH = 'models/vit_weights.pth'
 NUM_CLASSES = 7

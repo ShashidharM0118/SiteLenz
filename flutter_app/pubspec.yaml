@@ -31,6 +31,8 @@ dependencies:
   
   # Local Storage
   shared_preferences: ^2.2.2
+  sqflite: ^2.3.0
+  path: ^1.8.3
   
   # Utils
   intl: ^0.18.1
