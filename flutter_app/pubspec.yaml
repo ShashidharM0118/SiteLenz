@@ -19,8 +19,7 @@ dependencies:
   image_picker: ^1.0.4
   path_provider: ^2.1.1
   
-  # Audio & Speech - using record package instead
-  record: ^5.0.4
+  # Permissions
   permission_handler: ^11.0.1
   
   # Network

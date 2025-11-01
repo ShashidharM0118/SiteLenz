@@ -6,6 +6,8 @@ from PIL import Image
 import io
 import base64
 import os
+import time
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -88,7 +90,50 @@ def predict():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/health')
+@app.route('/api/unified/capture', methods=['POST'])
+def unified_capture():
+    """Handle unified capture from mobile app"""
+    try:
+        # Accept JSON with base64 encoded image
+        data = request.get_json()
+        
+        if not data or 'image' not in data:
+            return jsonify({'error': 'No image data provided'}), 400
+        
+        # Decode base64 image
+        img_base64 = data['image']
+        transcript = data.get('transcript', 'No transcript')
+        
+        # Convert base64 to image
+        img_bytes = base64.b64decode(img_base64)
+        img = Image.open(io.BytesIO(img_bytes)).convert('RGB')
+        
+        # Preprocess and predict
+        img_tensor = transform(img).unsqueeze(0).to(DEVICE)
+        
+        with torch.no_grad():
+            outputs = model(img_tensor)
+            probabilities = torch.nn.functional.softmax(outputs, dim=1)
+            confidence, predicted = torch.max(probabilities, 1)
+        
+        # Prepare results
+        prediction = CLASS_NAMES[predicted.item()]
+        confidence_score = confidence.item() * 100
+        
+        return jsonify({
+            'success': True,
+            'classification': prediction,
+            'confidence': round(confidence_score, 2),
+            'transcript': transcript,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        })
+    
+    except Exception as e:
+        print(f"Error in unified_capture: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/health', methods=['GET'])
+@app.route('/health', methods=['GET'])
 def health():
     """Health check endpoint"""
     return jsonify({
