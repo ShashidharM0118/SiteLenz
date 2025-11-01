@@ -89,16 +89,23 @@ def upload_image():
     """
     Upload an image with metadata to a session
     
-    Request JSON:
+    Accepts both multipart/form-data and JSON formats:
+    
+    Multipart Form Data:
+        - session_id: string
+        - image: file
+        - image_index: string (optional)
+        - camera_pose: JSON string (optional)
+        - classification: string (optional)
+        - transcript: string (optional)
+    
+    JSON:
         {
             "session_id": "session_1234567890",
             "image": "base64_encoded_image",
-            "camera_pose": {
-                "position": [x, y, z],
-                "rotation": [qx, qy, qz, qw]
-            },
-            "transcript": "Voice note about this capture",
-            "classification": "Major Crack" (from classification API)
+            "camera_pose": {"position": [x, y, z], "rotation": [qx, qy, qz, qw]},
+            "transcript": "Voice note",
+            "classification": "Major Crack"
         }
     
     Returns:
@@ -109,51 +116,114 @@ def upload_image():
         }
     """
     try:
-        data = request.get_json()
-        
-        session_id = data.get('session_id')
-        if not session_id or session_id not in active_sessions:
-            return jsonify({'success': False, 'error': 'Invalid session ID'}), 400
-        
-        session = active_sessions[session_id]
-        
-        # Check session limits
-        if len(session['images']) >= API_CONFIG['max_images_per_session']:
-            return jsonify({
-                'success': False,
-                'error': f"Maximum {API_CONFIG['max_images_per_session']} images per session"
-            }), 400
-        
-        # Decode and save image
-        img_base64 = data.get('image')
-        if not img_base64:
-            return jsonify({'success': False, 'error': 'No image data provided'}), 400
-        
-        img_bytes = base64.b64decode(img_base64)
-        img_num = len(session['images'])
-        img_filename = f"img_{img_num:04d}.jpg"
-        img_path = Path(session['folder']) / img_filename
-        
-        with open(img_path, 'wb') as f:
-            f.write(img_bytes)
-        
-        # Store image metadata
-        image_info = {
-            'filename': img_filename,
-            'path': str(img_path),
-            'camera_pose': data.get('camera_pose', {}),
-            'transcript': data.get('transcript', ''),
-            'classification': data.get('classification', 'Unknown'),
-            'confidence': data.get('confidence', 0.0),
-            'timestamp': time.time()
-        }
+        # Handle both multipart and JSON requests
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            # Multipart form data (file upload)
+            session_id = request.form.get('session_id')
+            
+            logger.info(f"Upload request - Session ID: {session_id}")
+            logger.info(f"Active sessions: {list(active_sessions.keys())}")
+            
+            if not session_id:
+                return jsonify({'success': False, 'error': 'No session_id provided'}), 400
+                
+            if session_id not in active_sessions:
+                return jsonify({
+                    'success': False, 
+                    'error': f'Invalid session ID: {session_id}. Please start a session first.',
+                    'active_sessions': list(active_sessions.keys())
+                }), 400
+            
+            session = active_sessions[session_id]
+            
+            # Check session limits
+            if len(session['images']) >= API_CONFIG['max_images_per_session']:
+                return jsonify({
+                    'success': False,
+                    'error': f"Maximum {API_CONFIG['max_images_per_session']} images per session"
+                }), 400
+            
+            # Get uploaded file
+            if 'image' not in request.files:
+                return jsonify({'success': False, 'error': 'No image file provided'}), 400
+            
+            image_file = request.files['image']
+            if image_file.filename == '':
+                return jsonify({'success': False, 'error': 'Empty filename'}), 400
+            
+            # Save image
+            img_num = len(session['images'])
+            img_filename = f"img_{img_num:04d}.jpg"
+            img_path = Path(session['folder']) / img_filename
+            image_file.save(str(img_path))
+            
+            # Parse camera pose if provided
+            camera_pose = {}
+            if 'camera_pose' in request.form:
+                try:
+                    camera_pose = json.loads(request.form['camera_pose'])
+                except:
+                    camera_pose = {}
+            
+            # Store image metadata
+            image_info = {
+                'filename': img_filename,
+                'path': str(img_path),
+                'camera_pose': camera_pose,
+                'transcript': request.form.get('transcript', ''),
+                'classification': request.form.get('classification', 'Unknown'),
+                'confidence': float(request.form.get('confidence', 0.0)),
+                'timestamp': time.time()
+            }
+            
+        else:
+            # JSON format (original format)
+            data = request.get_json()
+            
+            session_id = data.get('session_id')
+            if not session_id or session_id not in active_sessions:
+                return jsonify({'success': False, 'error': 'Invalid session ID'}), 400
+            
+            session = active_sessions[session_id]
+            
+            # Check session limits
+            if len(session['images']) >= API_CONFIG['max_images_per_session']:
+                return jsonify({
+                    'success': False,
+                    'error': f"Maximum {API_CONFIG['max_images_per_session']} images per session"
+                }), 400
+            
+            # Decode and save image
+            img_base64 = data.get('image')
+            if not img_base64:
+                return jsonify({'success': False, 'error': 'No image data provided'}), 400
+            
+            img_bytes = base64.b64decode(img_base64)
+            img_num = len(session['images'])
+            img_filename = f"img_{img_num:04d}.jpg"
+            img_path = Path(session['folder']) / img_filename
+            
+            with open(img_path, 'wb') as f:
+                f.write(img_bytes)
+            
+            # Store image metadata
+            image_info = {
+                'filename': img_filename,
+                'path': str(img_path),
+                'camera_pose': data.get('camera_pose', {}),
+                'transcript': data.get('transcript', ''),
+                'classification': data.get('classification', 'Unknown'),
+                'confidence': data.get('confidence', 0.0),
+                'timestamp': time.time()
+            }
+            img_num = len(session['images'])
         
         session['images'].append(image_info)
         
         # If there's a crack, add annotation
         classification = image_info['classification']
-        if classification and classification.lower() not in ['plain', 'normal', 'unknown']:
-            position = data.get('camera_pose', {}).get('position', [0, 0, 0])
+        if classification and classification.lower() not in ['plain', 'normal', 'unknown', 'none']:
+            position = image_info['camera_pose'].get('position', [0, 0, 0])
             session['annotations'].append({
                 'position': position,
                 'classification': classification,
@@ -278,7 +348,82 @@ def run_reconstruction(recon_id: str, session: Dict, config: Dict):
         output_folder = OUTPUT_DIR / recon_id
         output_folder.mkdir(parents=True, exist_ok=True)
         
-        # Step 1: COLMAP reconstruction
+        # Check if COLMAP is installed
+        import shutil
+        colmap_available = shutil.which("colmap") is not None
+        
+        if not colmap_available:
+            # DEMO MODE: Create a simple point cloud from image positions
+            logger.warning("COLMAP not found! Running in DEMO mode...")
+            status['status'] = 'running'
+            status['current_step'] = 'demo_mode'
+            status['message'] = '⚠️ COLMAP not installed - Creating demo visualization...'
+            status['progress'] = 20
+            
+            import numpy as np
+            import trimesh
+            
+            # Create a simple point cloud from camera positions
+            points = []
+            colors = []
+            
+            for i, img_info in enumerate(session['images']):
+                # Get camera position from metadata
+                pos = img_info['camera_pose'].get('position', [0, 0, i * 0.5])
+                points.append(pos)
+                # Add some variation around each position
+                for _ in range(100):
+                    noise = np.random.randn(3) * 0.2
+                    points.append([pos[0] + noise[0], pos[1] + noise[1], pos[2] + noise[2]])
+                    # Color based on classification
+                    if 'crack' in img_info['classification'].lower():
+                        colors.append([255, 0, 0, 255])  # Red for cracks
+                    else:
+                        colors.append([100, 100, 200, 255])  # Blue for normal
+            
+            points = np.array(points)
+            colors = np.array(colors)
+            
+            status['progress'] = 60
+            status['message'] = 'Creating demo 3D model...'
+            
+            # Create point cloud
+            cloud = trimesh.PointCloud(vertices=points, colors=colors)
+            
+            status['progress'] = 80
+            
+            # Save outputs
+            output_ply = output_folder / "model.ply"
+            cloud.export(str(output_ply))
+            
+            # Create metadata
+            metadata = {
+                'reconstruction_id': recon_id,
+                'session_id': session.get('session_id', 'unknown'),
+                'project_name': session['project_name'],
+                'num_images': len(session['images']),
+                'num_annotations': len(session['annotations']),
+                'demo_mode': True,
+                'note': 'COLMAP not installed - demo visualization created',
+                'created_at': time.time()
+            }
+            
+            with open(output_folder / 'metadata.json', 'w') as f:
+                json.dump(metadata, f, indent=2)
+            
+            # Success!
+            status['status'] = 'completed'
+            status['progress'] = 100
+            status['message'] = '✅ Demo 3D model created! (Install COLMAP for real reconstruction)'
+            status['output_files'] = {
+                'ply': str(output_ply),
+            }
+            status['demo_mode'] = True
+            
+            logger.info(f"Demo reconstruction {recon_id} completed")
+            return
+        
+        # REAL MODE: Full COLMAP reconstruction
         status['status'] = 'running'
         status['current_step'] = 'colmap'
         status['message'] = 'Running COLMAP reconstruction...'
@@ -340,7 +485,7 @@ def run_reconstruction(recon_id: str, session: Dict, config: Dict):
         # Save metadata
         metadata = {
             'reconstruction_id': recon_id,
-            'session_id': session['session_id'],
+            'session_id': session.get('session_id', 'unknown'),
             'project_name': session['project_name'],
             'num_images': len(session['images']),
             'num_annotations': len(session['annotations']),
