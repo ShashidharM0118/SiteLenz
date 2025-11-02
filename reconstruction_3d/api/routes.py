@@ -394,7 +394,19 @@ def run_reconstruction(recon_id: str, session: Dict, config: Dict):
             
             # Save outputs
             output_ply = output_folder / "model.ply"
+            output_glb = output_folder / "model.glb"
+            
             cloud.export(str(output_ply))
+            
+            # Convert point cloud to mesh for GLB export (mobile viewer compatibility)
+            try:
+                # Create a simple mesh from point cloud using convex hull or ball pivoting
+                mesh = cloud.convex_hull
+                mesh.export(str(output_glb))
+                logger.info("Created GLB file for mobile viewing")
+            except Exception as e:
+                logger.warning(f"Could not create GLB mesh: {e}. Using PLY only.")
+                output_glb = None
             
             # Create metadata
             metadata = {
@@ -418,6 +430,8 @@ def run_reconstruction(recon_id: str, session: Dict, config: Dict):
             status['output_files'] = {
                 'ply': str(output_ply),
             }
+            if output_glb:
+                status['output_files']['glb'] = str(output_glb)
             status['demo_mode'] = True
             
             logger.info(f"Demo reconstruction {recon_id} completed")
@@ -537,10 +551,17 @@ def get_status(recon_id: str):
     
     status = reconstruction_status[recon_id]
     
-    return jsonify({
-        'success': True,
-        **status
-    })
+    # Add model_url for mobile app if reconstruction is completed
+    response_data = {'success': True, **status}
+    
+    if status['status'] == 'completed' and 'output_files' in status:
+        # Prefer GLB for mobile (best compatibility with model_viewer_plus)
+        if 'glb' in status['output_files']:
+            response_data['model_url'] = f'/api/3d/download/{recon_id}/glb'
+        elif 'ply' in status['output_files']:
+            response_data['model_url'] = f'/api/3d/download/{recon_id}/ply'
+    
+    return jsonify(response_data)
 
 
 @reconstruction_bp.route('/download/<recon_id>/<file_type>', methods=['GET'])
@@ -571,6 +592,48 @@ def download_model(recon_id: str, file_type: str):
         return jsonify({'success': False, 'error': 'File not found'}), 404
     
     return send_file(file_path, as_attachment=True)
+
+
+@reconstruction_bp.route('/viewer/<recon_id>', methods=['GET'])
+def view_model(recon_id: str):
+    """
+    Serve the 3D model viewer for a specific reconstruction
+    
+    Args:
+        recon_id: Reconstruction ID
+    
+    Returns:
+        HTML viewer page
+    """
+    if recon_id not in reconstruction_status:
+        return jsonify({'success': False, 'error': 'Invalid reconstruction ID'}), 404
+    
+    status = reconstruction_status[recon_id]
+    
+    if status['status'] != 'completed':
+        return jsonify({'success': False, 'error': 'Reconstruction not completed'}), 400
+    
+    # Get the PLY file URL
+    ply_url = f'/api/3d/download/{recon_id}/ply'
+    
+    # Read the viewer template and inject the model URL
+    viewer_path = Path(__file__).parent.parent / 'web' / 'viewer.html'
+    
+    if not viewer_path.exists():
+        return jsonify({'success': False, 'error': 'Viewer template not found'}), 500
+    
+    with open(viewer_path, 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    
+    # Inject the model URL into the HTML
+    model_url = f'{request.host_url.rstrip("/")}{ply_url}'
+    html_content = html_content.replace(
+        'const MODEL_URL = null;',
+        f'const MODEL_URL = "{model_url}";'
+    )
+    
+    from flask import Response
+    return Response(html_content, mimetype='text/html')
 
 
 @reconstruction_bp.route('/sessions', methods=['GET'])

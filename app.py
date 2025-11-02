@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory, send_from_directory
 import torch
 import timm
 from torchvision import transforms
@@ -198,6 +198,16 @@ def health():
         'model_loaded': model is not None,
         'device': str(DEVICE)
     })
+
+@app.route('/viewer/<path:filename>')
+def serve_viewer(filename):
+    """Serve the 3D web viewer"""
+    return send_from_directory('reconstruction_3d/web', filename)
+
+@app.route('/viewer')
+def viewer():
+    """Serve the main 3D viewer page"""
+    return send_from_directory('reconstruction_3d/web', 'viewer.html')
 
 if __name__ == '__main__':
     print("🚀 Starting SiteLenz Web Interface...")

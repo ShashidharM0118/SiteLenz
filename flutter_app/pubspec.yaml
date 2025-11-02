@@ -37,6 +37,10 @@ dependencies:
   # Utils
   intl: ^0.18.1
   flutter_animate: ^4.3.0
+  
+  # 3D Model Viewer
+  model_viewer_plus: ^1.7.2
+  webview_flutter: ^4.4.2
 
 dev_dependencies:
   flutter_test:
@@ -49,3 +53,4 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    - assets/models/
