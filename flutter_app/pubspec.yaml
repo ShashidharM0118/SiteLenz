@@ -13,17 +13,29 @@ dependencies:
   # Speech recognition (like Google Speech API in your Python code)
   speech_to_text: ^7.0.0
   
+  # Camera for capturing images
+  camera: ^0.10.5+5
+  
   # Audio recording and playback
   audio_waveforms: ^1.1.0
   
   # File system access for saving transcripts
   path_provider: ^2.1.4
   
-  # Permissions (microphone)
+  # Permissions (microphone + camera)
   permission_handler: ^11.3.1
   
   # Date/time formatting
   intl: ^0.19.0
+  
+  # Google Generative AI (Gemini)
+  google_generative_ai: ^0.4.6
+  
+  # HTTP client for API calls
+  http: ^1.2.0
+  
+  # Image picker for uploading images to chat
+  image_picker: ^1.0.7
   
   # Text processing (like NLTK in Python)
   # For removing stop words and comparing with question paper
