@@ -37,6 +37,10 @@ dependencies:
   # Image picker for uploading images to chat
   image_picker: ^1.0.7
   
+  # PDF generation for professional reports
+  pdf: ^3.11.1
+  printing: ^5.13.2
+  
   # Text processing (like NLTK in Python)
   # For removing stop words and comparing with question paper
   
