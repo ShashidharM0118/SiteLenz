@@ -41,6 +41,9 @@ dependencies:
   pdf: ^3.11.1
   printing: ^5.13.2
   
+  # Environment variables
+  flutter_dotenv: ^5.1.0
+  
   # Text processing (like NLTK in Python)
   # For removing stop words and comparing with question paper
   
@@ -53,3 +56,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  
+  # Include environment file
+  assets:
+    - .env
