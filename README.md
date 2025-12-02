@@ -258,8 +258,88 @@ Complete AI-powered system for detecting building defects with mobile app, voice
 │  9. Professional PDF report generated with location-based cost estimates and stats       │
 │  10. Data stored locally with backup, including location data for future analysis       │
 └──────────────────────────────────────────────────────────────────────────────────────────┘
-└──────────────────────────────────────────────────────────────────────────────────────────┘
-```
+
+## 🧪 Methodology Overview
+
+SiteLenz follows a simple but rigorous pipeline:
+
+- Capture multi‑angle images, video frames and voice notes from site inspections.
+- Classify each frame into one of 7 wall conditions (Algae, Major Crack, Minor Crack, Peeling, Plain, Spalling, Stain) using a Vision Transformer model.
+- Aggregate results across time and locations to compute defect statistics, risk scores and cost estimates.
+- Feed these quantitative metrics plus voice transcripts into Groq‑powered LLM prompts to generate a detailed, engineer‑style PDF report.
+
+This section summarizes the main formulas used in the statistics and risk computation.
+
+## 📐 Core Equations & Scoring
+
+This section keeps the maths simple so you can copy it directly into a report.
+
+**Defect representation**
+
+Each detected defect is stored as:
+
+`dᵢ = (typeᵢ, confidenceᵢ, locationᵢ, severityᵢ, timeᵢ)`
+
+All defects from one inspection form a dataset:
+
+`D = {d₁, d₂, …, dₙ}`  where `n = |D|` is the total number of detected defects.
+
+**Severity percentages**
+
+- Let `N_critical`, `N_high`, `N_medium`, `N_low` be the number of defects of each severity.
+- Total defects: `N = N_critical + N_high + N_medium + N_low`.
+- Percentage of a given severity `s`:
+
+  `P_s (%) = 100 × N_s / N  (if N > 0, otherwise 0)`
+
+**Average confidence**
+
+If `cᵢ` is the confidence for defect `dᵢ` (between 0 and 1), the average confidence in percent is:
+
+`C_avg (%) = (100 / N) × Σ cᵢ`
+
+This number is shown in the “Average Confidence Score” row of the statistics table.
+
+**Location severity index**
+
+Text severities are converted to numeric scores:
+
+- critical → 10  
+- high → 7  
+- medium → 5  
+- low → 3  
+
+For a location `ℓ` with `n_ℓ` defects, the location severity score is:
+
+`S_ℓ = (1 / n_ℓ) × Σ score(severityᵢ at ℓ)`
+
+This gives a 0–10 severity score for each wall/room that appears in the report.
+
+**Composite risk scores (0–10)**
+
+Critical structural defects (e.g. `major_crack`, `spalling`) are given higher weight when computing risk:
+
+- structural risk uses a higher weight for critical defects  
+- safety risk also emphasises critical defects  
+- deterioration risk depends mainly on how many defects exist and their confidences  
+
+In code, each defect contributes `weight × confidence` to each risk. The sums are divided by `N` and clipped between 0 and 10, producing:
+
+- `R_struct`  – structural risk (0–10)  
+- `R_safety`  – safety risk (0–10)  
+- `R_det`     – deterioration risk (0–10)  
+- `R_overall` – overall combined risk (0–10)  
+
+These numeric scores are then mapped to labels:
+
+- 0–4   → Low  
+- 4–6   → Medium  
+- 6–8   → High  
+- 8–10 → Critical  
+
+and used by the AI text generator to write the “Risk Assessment” and “Recommendations” sections of the PDF.
+
+---
 
 ---
 ## 🎯 Features

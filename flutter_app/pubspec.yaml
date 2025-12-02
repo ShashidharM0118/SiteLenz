@@ -41,6 +41,11 @@ dependencies:
   # Environment variables
   flutter_dotenv: ^5.1.0
   
+  # Google Maps for location selection
+  google_maps_flutter: ^2.5.0
+  geolocator: ^10.1.0
+  geocoding: ^2.1.1
+  
   # Text processing (like NLTK in Python)
   # For removing stop words and comparing with question paper
   
