@@ -200,51 +200,39 @@ Complete AI-powered system for detecting building defects with mobile app, voice
                                          │
                                          ▼
 ┌──────────────────────────────────────────────────────────────────────────────────────────┐
-│  PHASE 7: REAL-TIME ANALYTICS & DASHBOARDS                                               │
+│  PHASE 7: DATA STORAGE & BACKUP                                                         │
 └──────────────────────────────────────────────────────────────────────────────────────────┘
                                          │
         ┌────────────────────────────────┼────────────────────────────────┐
         │                                │                                │
         ▼                                ▼                                ▼
 ┌──────────────────┐          ┌──────────────────┐          ┌──────────────────┐
-│  Building Owner  │          │  Inspector       │          │  Stakeholder     │
-│  Dashboard       │          │  Mobile App      │          │  Portal          │
+│  Database        │          │  File Storage    │          │  Location Data   │
+│  (SQLite)        │          │  (Local)         │          │  Store           │
 ├──────────────────┤          ├──────────────────┤          ├──────────────────┤
-│ • Inspection     │          │ • Offline mode   │          │ • Multi-building │
-│   status         │          │ • Real-time      │          │   overview       │
-│ • Trend analysis │          │   detection      │          │ • Compliance     │
-│ • Compliance     │          │ • Voice capture  │          │   tracking       │
-│   violations     │          │ • 3D viewer      │          │ • Risk heatmaps  │
-│ • Risk scores    │          │ • Report gen.    │          │ • Cost analytics │
-│ • Cost tracking  │          │ • Sync on return │          │ • Timeline view  │
-│ • Historical     │          │   to network     │          │ • Export tools   │
-│   comparisons    │          │                  │          │                  │
+│ • Defect records │          │ • Images         │          │ • Coordinates    │
+│ • Inspections    │          │ • PDFs           │          │ • Addresses      │
+│ • Metadata       │          │ • 3D models      │          │ • Map data       │
+│ • History        │          │ • Audio files    │          │ • Regional info  │
+│ • Analytics      │          │ • Reports        │          │ • Climate zones  │
 └──────────────────┘          └──────────────────┘          └──────────────────┘
         │                                │                                │
         └────────────────────────────────┼────────────────────────────────┘
                                          │
                                          ▼
-┌──────────────────────────────────────────────────────────────────────────────────────────┐
-│  DATA STORAGE & MANAGEMENT                                                               │
-└──────────────────────────────────────────────────────────────────────────────────────────┘
-                                         │
-        ┌────────────────────────────────┼────────────────────────────────┐
-        │                                │                                │
-        ▼                                ▼                                ▼
-┌──────────────────┐          ┌──────────────────┐          ┌──────────────────┐
-│  Database        │          │  File Storage    │          │  Cloud Backup    │
-│  (PostgreSQL)    │          │  (Local/Cloud)   │          │  (Optional)      │
-├──────────────────┤          ├──────────────────┤          ├──────────────────┤
-│ • Defect records │          │ • Images         │          │ • Auto-backup    │
-│ • Inspections    │          │ • PDFs           │          │ • Version ctrl   │
-│ • Users          │          │ • 3D models      │          │ • Disaster rec.  │
-│ • Buildings      │          │ • Audio files    │          │ • Long-term      │
-│ • Analytics      │          │ • Reports        │          │   archival       │
-└──────────────────┘          └──────────────────┘          └──────────────────┘
+                              ┌──────────────────┐
+                              │  Backup System   │
+                              │  (Local)         │
+                              ├──────────────────┤
+                              │ • Daily backup   │
+                              │ • Weekly archive │
+                              │ • Version ctrl   │
+                              └──────────────────┘
 
 ┌──────────────────────────────────────────────────────────────────────────────────────────┐
 │  KEY TECHNOLOGIES & SPECIFICATIONS                                                       │
 ├──────────────────────────────────────────────────────────────────────────────────────────┤
+│  • Location: Google Maps API for site selection and regional cost estimation            │
 │  • Computer Vision: Mask R-CNN (segmentation), YOLOv8 (detection), ViT (classification) │
 │  • AI/NLP: Groq API with Mixtral-8x7b-32768 model (1000+ word prompts)                 │
 │  • 3D Reconstruction: COLMAP Structure-from-Motion pipeline                              │
@@ -253,30 +241,35 @@ Complete AI-powered system for detecting building defects with mobile app, voice
 │  • Backend: Flask/Python, PyTorch, TensorFlow                                           │
 │  • Dataset: 10,000+ labeled images across 7 defect classes                              │
 │  • Compliance: IS 456:2000 (Concrete), NBC 2016 (Building Code)                        │
-│  • Report: 15-20 pages, AI-generated content, Professional formatting                   │
+│  • Report: 15-20 pages, AI-generated content with location-based cost estimates         │
 └──────────────────────────────────────────────────────────────────────────────────────────┘
-
 ┌──────────────────────────────────────────────────────────────────────────────────────────┐
 │  WORKFLOW SUMMARY                                                                        │
 ├──────────────────────────────────────────────────────────────────────────────────────────┤
-│  1. Inspector captures images + voice notes via mobile app (offline capable)            │
-│  2. Images processed by Mask R-CNN, YOLO, and ViT in parallel                           │
-│  3. Results aggregated with ensemble voting for final classification                     │
-│  4. Voice transcripts mapped to defects using NLP                                        │
-│  5. 3D reconstruction creates spatial context from multi-angle images                    │
-│  6. Groq AI analyzes all data with 1000+ word detailed prompts                          │
-│  7. System checks compliance with IS 456:2000 and NBC 2016 codes                        │
-│  8. Professional PDF report generated with statistics, risks, and recommendations        │
-│  9. Real-time dashboards updated for all stakeholders                                    │
-│  10. Data stored with backup, ready for trend analysis and future inspections           │
+│  0. User selects inspection site location via interactive map (Google Maps API)         │
+│  1. System captures coordinates, address, region, and climate data for cost estimation  │
+│  2. Inspector captures images + voice notes via mobile app (offline capable)            │
+│  3. Images processed by Mask R-CNN, YOLO, and ViT in parallel                           │
+│  4. Results aggregated with ensemble voting for final classification                     │
+│  5. Voice transcripts mapped to defects using NLP                                        │
+│  6. 3D reconstruction creates spatial context from multi-angle images                    │
+│  7. Groq AI analyzes all data with location context using 1000+ word prompts            │
+│  8. System checks compliance with IS 456:2000 and NBC 2016 codes                        │
+│  9. Professional PDF report generated with location-based cost estimates and stats       │
+│  10. Data stored locally with backup, including location data for future analysis       │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
 └──────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
-
 ## 🎯 Features
 
 ### Core Capabilities
+- 🗺️ **Location-Based Analysis**: 
+  - Interactive Google Maps interface for site selection
+  - Automatic capture of coordinates, address, and regional data
+  - Location-based cost estimation with regional pricing factors
+  - Climate and environmental factor analysis for defect assessment
 - 🤖 **Multi-Model AI Pipeline**: 
   - **Mask R-CNN**: Pixel-level instance segmentation with precise defect boundaries
   - **YOLO v8/v9**: Real-time object detection with bounding boxes
@@ -285,10 +278,9 @@ Complete AI-powered system for detecting building defects with mobile app, voice
 - 📱 **Mobile App**: Flutter app for Android/iOS with offline-first architecture
 - 🎤 **Voice Annotations**: Speech-to-text with real-time transcription and context mapping
 - 🏗️ **3D Reconstruction**: COLMAP-based Structure-from-Motion for spatial analysis
-- 👁️ **3D Model Viewer**: Interactive AR-enabled viewer with measurements
-- 📊 **Real-Time Dashboards**: Multi-stakeholder analytics with trend tracking
-- 📄 **AI-Powered Reports**: Groq AI generates comprehensive 15-20 page PDF reports
+- 📄 **AI-Powered Reports**: Groq AI generates comprehensive 15-20 page PDF reports with location context
 - ⚖️ **Code Compliance**: Automated mapping to IS 456:2000 and NBC 2016 standards
+- 📡 **Offline Support**: Full inspection capability without network connectivity
 - 📡 **Offline Support**: Full inspection capability without network connectivity
 
 ### Advanced Features
@@ -742,16 +734,26 @@ flutter build apk --release
 - **Training Platform**: Kaggle T4 x2 GPU
 - **Dataset Size**: 10,000+ labeled images across 7 defect classes
 
+### Location & Mapping
+- **Map API**: Google Maps API (MAP_API_KEY in .env)
+- **Data Captured**: 
+  - Latitude/Longitude coordinates
+  - Full address (street, city, state, postal code)
+  - Region and climate zone
+  - Environmental factors (coastal, urban, industrial)
+- **Cost Estimation**: Location-based pricing for materials and labor
+- **Regional Analysis**: Climate impact on defect severity and repair urgency
+
 ### NLP & Report Generation
 - **AI Provider**: Groq API with Mixtral-8x7b-32768 model
 - **Prompt Engineering**: 1000+ word detailed prompts for comprehensive analysis
 - **Content Generation**: 
-  - Executive summaries (500-600 words)
-  - Technical insights (700-900 words)
-  - Recommendations (900-1100 words)
+  - Executive summaries (500-600 words with location context)
+  - Technical insights (700-900 words with regional factors)
+  - Recommendations (900-1100 words with location-based cost estimates)
   - Per-defect analysis (400-450 words each)
 - **Indian Code Compliance**: Automated mapping to IS 456:2000, NBC 2016
-- **Context Integration**: Voice transcripts, spatial data, historical trends
+- **Context Integration**: Location data, voice transcripts, spatial data, historical trends
 
 ### 3D Reconstruction
 - **Method**: COLMAP Structure-from-Motion pipeline
@@ -769,12 +771,13 @@ flutter build apk --release
 - **Audio**: Real-time transcription with offline caching
 
 ### Performance Metrics
+- **Map Integration**: <500ms for location fetch and address resolution
 - **Detection Speed**: 
   - YOLO: 15-25ms per image (real-time)
   - ViT: 50ms per image
   - Mask R-CNN: 200ms per image
 - **Combined Pipeline**: ~300ms per image (all models)
-- **Report Generation**: 2-4 minutes (includes 8-12 AI API calls)
+- **Report Generation**: 2-4 minutes (includes 8-12 AI API calls with location context)
 - **3D Reconstruction**: 2-5 minutes for 10-20 images
 - **Mobile App**: <100ms UI response time, offline-capable
 
