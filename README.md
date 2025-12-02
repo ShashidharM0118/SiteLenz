@@ -13,6 +13,7 @@ Complete AI-powered system for detecting building defects with mobile app, voice
 - 🏗️ **3D Reconstruction**: Create 3D models from multiple images
 - 👁️ **3D Model Viewer**: Interactive AR-enabled model viewer
 - 📊 **Unified Logging**: Track all inspections with timestamps
+- 📄 **AI-Powered PDF Reports**: Comprehensive inspection reports with statistics, risk assessment, and cost estimates (powered by Groq AI)
 
 ### Defect Types Detected
 1. Algae growth
@@ -60,6 +61,38 @@ flutter build apk --release
 ---
 
 ## 🖥️ Backend Server Setup
+
+### Configure API Keys
+
+The project now uses **Groq API** for AI-powered chat and analysis features.
+
+1. **Get a free Groq API key:**
+   - Visit: https://console.groq.com/
+   - Sign up for a free account
+   - Copy your API key
+
+2. **Create `.env` file:**
+   ```bash
+   # Copy the example file
+   cp .env.example .env
+   ```
+
+3. **Add your API key to `.env`:**
+   ```dotenv
+   GROQ_API_KEY=your_actual_groq_api_key_here
+   ```
+
+4. **Test the configuration:**
+   ```bash
+   python config_env.py
+   # Should show: ✓ GROQ_API_KEY: gsk_xxxx...xxxx
+   ```
+
+5. **Test the Groq client:**
+   ```bash
+   python groq_helper.py
+   # Should show successful test responses
+   ```
 
 ### Fix PyTorch DLL Error (Windows)
 
@@ -141,6 +174,8 @@ netsh advfirewall firewall add rule name="Flask Server" dir=in action=allow prot
 ### Backend Setup
 - [ ] Python 3.10 or 3.11 installed (NOT 3.13)
 - [ ] Visual C++ Redistributables installed
+- [ ] `.env` file created with GROQ_API_KEY
+- [ ] API key working: `python config_env.py`
 - [ ] PyTorch working: `python -c "import torch; print(torch.__version__)"`
 - [ ] Dependencies installed: `pip install -r requirements.txt`
 - [ ] Model file in `models/vit_weights.pth`
@@ -305,7 +340,7 @@ flutter build apk --release
 3. Capture image while recording
 4. View combined log with transcript
 
-### 3. 3D Room Reconstruction
+### 4. 3D Room Reconstruction
 1. Navigate to **3D Reconstruction** tab
 2. Tap **"Start 3D Session"**
 3. Walk around room capturing **10+ images** from different angles
@@ -313,7 +348,12 @@ flutter build apk --release
 5. Wait for processing
 6. Tap **"View 3D Model"** to see in 3D viewer
 
-### 4. 3D Model Viewer Controls
+### 5. Generate Professional PDF Report
+1. Go to **Reports** tab
+2. Tap **"Generate Report"** - AI analyzes all data and generates 10+ page professional report
+3. Download or share the PDF
+
+### 6. 3D Model Viewer Controls
 - **Drag** → Rotate model
 - **Pinch** → Zoom in/out
 - **Two-finger drag** → Pan camera
@@ -390,7 +430,11 @@ timm==0.9.12
 Pillow==9.5.0
 numpy>=1.24.0
 opencv-python>=4.8.0
+python-dotenv>=1.0.0
+requests>=2.31.0
 ```
+
+**Note:** The project uses Groq API for AI chat features. Get a free API key at https://console.groq.com/
 
 ### Flutter Mobile
 ```yaml

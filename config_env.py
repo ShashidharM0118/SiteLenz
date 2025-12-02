@@ -7,7 +7,7 @@ in Python applications within this project.
 Usage:
     from config_env import get_api_key
     
-    api_key = get_api_key('GEMINI_API_KEY')
+    api_key = get_api_key('GROQ_API_KEY')
 """
 
 import os
@@ -44,7 +44,7 @@ def get_api_key(key_name: str, required: bool = True) -> str:
         ValueError: If required=True and key is not found
         
     Example:
-        >>> api_key = get_api_key('GEMINI_API_KEY')
+        >>> api_key = get_api_key('GROQ_API_KEY')
         >>> print(f"Key found: {bool(api_key)}")
     """
     value = os.getenv(key_name)
@@ -94,23 +94,13 @@ if __name__ == "__main__":
     print("-" * 60)
     
     try:
-        gemini_key = get_api_key('GEMINI_API_KEY', required=False)
-        if gemini_key:
+        groq_key = get_api_key('GROQ_API_KEY', required=False)
+        if groq_key:
             # Only show first and last 4 characters for security
-            masked_key = f"{gemini_key[:8]}...{gemini_key[-4:]}"
-            print(f"✓ GEMINI_API_KEY: {masked_key}")
+            masked_key = f"{groq_key[:8]}...{groq_key[-4:]}"
+            print(f"✓ GROQ_API_KEY: {masked_key}")
         else:
-            print("✗ GEMINI_API_KEY: Not found")
-    except ValueError as e:
-        print(f"✗ Error: {e}")
-    
-    try:
-        chat_key = get_api_key('GEMINI_CHAT_API_KEY', required=False)
-        if chat_key:
-            masked_key = f"{chat_key[:8]}...{chat_key[-4:]}"
-            print(f"✓ GEMINI_CHAT_API_KEY: {masked_key}")
-        else:
-            print("✗ GEMINI_CHAT_API_KEY: Not found")
+            print("✗ GROQ_API_KEY: Not found")
     except ValueError as e:
         print(f"✗ Error: {e}")
     
